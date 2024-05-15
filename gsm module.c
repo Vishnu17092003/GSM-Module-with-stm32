@@ -1,3 +1,4 @@
+
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
@@ -18,7 +19,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include <string.h>
+#include <stdio.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -43,15 +45,6 @@ UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
-#include<stdio.h>
-#include<string.h>
-#define gam_bugger_size 500
-char buf[100];
-char gsm_buffer[500];
-int gsm_index;
-int debug_index;
-uint8_t gsm_wait_status;
-
 
 /* USER CODE END PV */
 
@@ -61,30 +54,6 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
-void gsm_on()
-{
-
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_SET);
-	HAL_Delay(1000);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
-	HAL_Delay(1000);
-}
-
-void gsm_cmd(char *cmd, int gsm_delay)
-{
-        gsm_wait_status=0;
-        memset(gsm_buffer,'\0',sizeof(gsm_buffer));
-        HAL_UART_Transmit(&huart2,(uint8_t*) cmd, strlen(cmd),1000);
-        HAL_Delay(300);
-        if(gsm_index>0)
-        {
-        HAL_Delay(10);
-        gsm_index=0;
-        gsm_wait_status=1;
-        HAL_UART_Transmit(&huart3, (uint8_t *)gsm_buffer, strlen(gsm_buffer), 300);
-
-        }
-}
 
 /* USER CODE END PFP */
 
@@ -92,9 +61,6 @@ void gsm_cmd(char *cmd, int gsm_delay)
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
-char http[80]="";
-char url[80];
-
 
 /**
   * @brief  The application entry point.
@@ -128,13 +94,41 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  char mobileNumber[] = "+61498749497";  // Enter the Mobile Number you want to send to
+   char ATcommand[80];
+   uint8_t buffer[30] = {0};
+   uint8_t ATisOK = 0;
+   while(!ATisOK){
+   		sprintf(ATcommand,"AT\r\n");
+   		HAL_UART_Transmit(&huart2,(uint8_t *)ATcommand,strlen(ATcommand),1000);
+   		HAL_UART_Receive (&huart2, buffer, 30, 100);
+   		
+   		HAL_Delay(1000);
+   		if(strstr((char *)buffer,"OK")){
+   			ATisOK = 1;
+   			HAL_UART_Transmit (&huart3, buffer, 30, 100);
+   		}
+   		HAL_Delay(1000);
+   		memset(buffer,0,sizeof(buffer));
+   }
+   sprintf(ATcommand,"AT+CMGF=1\r\n");
+   HAL_UART_Transmit(&huart2,(uint8_t *)ATcommand,strlen(ATcommand),1000);
+   HAL_UART_Receive (&huart2, buffer, 30, 100);
+   HAL_Delay(1000);
+   memset(buffer,0,sizeof(buffer));
+   sprintf(ATcommand,"AT+CMGS=\"%s\"\r\n",mobileNumber);
+   HAL_UART_Transmit(&huart2,(uint8_t *)ATcommand,strlen(ATcommand),1000);
+   HAL_Delay(100);
+   sprintf(ATcommand,"Hello World, STM32 started%c",0x1a);
+   HAL_UART_Transmit(&huart2,(uint8_t *)ATcommand,strlen(ATcommand),1000);
+   HAL_UART_Receive (&huart2, buffer, 30, 100);
+   memset(buffer,0,sizeof(buffer));
+   HAL_Delay(4000);
 
-  gsm_on();
+
+
+
   /* USER CODE END 2 */
-  HAL_UART_Transmit(&huart3, (uint8_t*) "GSM_INIT\n\r", sizeof("GSM_INIT\n\r"), 300);
-    int a=1;
-    char var[70];
-    char data[]="------------\n\r";
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -143,57 +137,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  HAL_UART_Transmit(&huart2, (uint8_t *)"AT\r\n", sizeof("AT\r\n"), 300);//here my communication uart is 2 for gsm module
-	    HAL_Delay(300);
-	    HAL_UART_Transmit(&huart3, (uint8_t *)gsm_buffer, sizeof(gsm_buffer), 300);
-	    HAL_Delay(500);
 
-	    HAL_UART_Transmit(&huart2, (uint8_t *)"AT+QIFGCNT=0\r\n", sizeof("AT+QIFGCNT=0\r\n"), 300);
-	    HAL_Delay(500);
-	    HAL_UART_Transmit(&huart3, (uint8_t *)gsm_buffer, sizeof(gsm_buffer), 300);
-	    HAL_Delay(500);
-
-
-	    HAL_UART_Transmit(&huart2, (uint8_t *)"AT+QICSGP=1,\"simcom.com\"\r\n", sizeof("AT+QICSGP=1,\"Airteliot.com\"\r\n"), 300);
-	    HAL_Delay(500);
-	    HAL_UART_Transmit(&huart3, (uint8_t *)gsm_buffer, sizeof(gsm_buffer), 300);
-	    HAL_Delay(500);
-
-	    HAL_UART_Transmit(&huart2, (uint8_t *)"AT+QIREGAPP\r\n", sizeof("AT+QIREGAPP\r\n"), 300);
-	    HAL_Delay(1000);
-	    HAL_UART_Transmit(&huart3, (uint8_t *)gsm_buffer, sizeof(gsm_buffer), 300);
-	    HAL_Delay(1000);
-
-
-
-	    HAL_UART_Transmit(&huart2, (uint8_t *)"AT+QIACT\r\n", sizeof("AT+QIACT\r\n"), 300);
-	    HAL_Delay(3000);
-	    HAL_UART_Transmit(&huart3, (uint8_t *)gsm_buffer, sizeof(gsm_buffer), 300);
-	    HAL_Delay(1000);
-
-	    sprintf(url,"AT+QHTTPURL=%d,40\r\n",strlen(http));
-
-
-
-	    HAL_Delay(2000);
-	    HAL_UART_Transmit(&huart2, (uint8_t *)url, strlen(url), 300);
-	    HAL_Delay(1000);
-
-	    HAL_UART_Transmit(&huart2, (uint8_t *)http, strlen(http), 300);
-	        HAL_Delay(1000);
-
-	    HAL_UART_Transmit(&huart2, (uint8_t *)"AT+QHTTPGET=40\r\n", sizeof("AT+QHTTPGET=80\r\n"), 300);
-	    HAL_Delay(6000);
-	    HAL_UART_Transmit(&huart3, (uint8_t *)gsm_buffer, sizeof(gsm_buffer), 300);
-
-	    HAL_UART_Transmit(&huart2, (uint8_t *)"AT+QHTTPREAD=60\r\n", sizeof("AT+QHTTPREAD=60\r\n"), 300);
-	    HAL_Delay(2000);
-	    HAL_UART_Transmit(&huart3, (uint8_t *)gsm_buffer, sizeof(gsm_buffer), 300);
-
-	    HAL_Delay(10000);
-	    HAL_UART_Transmit(&huart2, (uint8_t *)"AT+QIDEACT\r\n", sizeof("AT+QIDEACT\r\n"), 300);
-	    HAL_Delay(1000);
-	    HAL_UART_Transmit(&huart3, (uint8_t *)gsm_buffer, sizeof(gsm_buffer), 300);
   }
   /* USER CODE END 3 */
 }
@@ -312,16 +256,30 @@ static void MX_USART3_UART_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PB7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_7;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
 
 /* USER CODE BEGIN 4 */
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	}
 /* USER CODE END 4 */
 
 /**
